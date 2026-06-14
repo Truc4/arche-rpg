@@ -1,8 +1,13 @@
-// Datasheet for the `game` device — the hot-reloadable gameplay/draw logic.
+// Datasheet for the `game` device — the hot-reloadable gameplay/physics logic.
 //
-// A device is BEHAVIOR-ONLY (the driver owns all storage), which is exactly what makes hot reload work
-// for free: under `arche run` this device compiles to its own reloadable `.so`; edit game.arche, and the
-// running host swaps in the new code while its state (the driver's frame counter, the open window) lives
-// on untouched. `arche build` statically links it — the reload indirection is compiled out entirely.
-//
-// game has no storage of its own yet; the datasheet's presence is what marks this folder a device.
+// A device is BEHAVIOR-ONLY: it declares the COMPONENTS it works with and the systems over them, but it
+// owns NO storage. The driver (rpg.arche) owns the actual `Player` pool; `[N]Player` here is the storage
+// REQUIREMENT (a minimum), not an allocation. That split is what makes hot reload work for free — the
+// device's code (physics/draw) can be swapped while the driver's pool (the live positions + velocities)
+// is untouched, so the balls keep flying across an edit. `arche build` statically links it; the reload
+// indirection is compiled out.
+x  :: int;
+y  :: int;
+vx :: int;
+vy :: int;
+[8]Player;

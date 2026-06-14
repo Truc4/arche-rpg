@@ -1,25 +1,63 @@
-// arche-rpg — the DRIVER / HOST. It owns the window and the loop (the persistent state); the gameplay
-// draw logic lives in the `game` device, which is reloadable.
+// arche-rpg — the DRIVER / HOST. It owns the window AND the world state (the `Player` pool); the gameplay
+// physics + draw logic live in the `game` device, which is reloadable.
 //
 //   arche run rpg.arche     → dev: game compiles to a reloadable `.so`; edit game/game.arche and the
-//                             window live-updates without restarting (the window + frame counter persist).
+//                             window live-updates without restarting. The Player pool (positions +
+//                             velocities) lives HERE in the driver, so it survives every reload — edit the
+//                             physics and watch it take effect on balls that are already in motion.
 //   arche build rpg.arche   → release: one static binary, every device call a direct call, zero reload
 //                             indirection.
 //
-// The driver never touches pixels and never restarts: it opens the window, then each frame asks `game`
-// to draw into it, presents, and polls for the close button.
+// The driver owns the pool and runs the loop; the device only supplies behavior (a `step` system over the
+// pool + a per-ball draw proc). The driver never touches pixels and never restarts.
 #import { gfx game os }
 
-main :: proc() {
-  gfx.open(640, 480, "arche-rpg — edit game/game.arche while this runs")(win:);
+// The world state. The `Player` shape's components come from the `game` device's datasheet; the driver
+// owns the actual pool (sized >= the datasheet's minimum). State persists across device reloads.
+[8]Player;
 
-  t       := 0;
-  is_open := 1;
-  for (; is_open != 0;) {
-    game.draw(win, t); // the hot logic — swap it live under `arche run`
+WIN_W  :: 640;
+WIN_H  :: 480;
+NBALLS :: 5;
+DT_MS  :: 16; // fixed simulation step = 16 ms (~60 Hz). The sim ALWAYS advances in whole DT_MS steps,
+// decoupled from how fast we actually draw → identical motion at any frame rate.
+MAX_CATCHUP :: 160; // cap accumulated time so a hitch (or a slow rebuild) can't trigger a death spiral.
+
+main :: proc() {
+  gfx.open(WIN_W, WIN_H, "arche-rpg — edit game/game.arche while this runs")(win:);
+
+  // Spawn the balls: (x, y, vx, vy). Different starting points → they oscillate toward the center with
+  // different amplitudes + phases, weaving through each other.
+  insert(Player, 80, 120, 0, 0)(_:, _:);
+  insert(Player, 560, 360, 0, 0)(_:, _:);
+  insert(Player, 100, 400, 7, 0)(_:, _:);
+  insert(Player, 540, 100, 0, 7)(_:, _:);
+  insert(Player, 320, 60, 0, 0)(_:, _:);
+
+  // Fixed-timestep loop. `acc` banks real elapsed milliseconds; we run `game.step` once per whole DT_MS
+  // banked, so the physics rate is stable no matter the draw rate (a stable sim, as requested).
+  acc: i64 = 0;
+  os.now_ms()(prev:);
+
+  for (is_open := true; is_open;) {
+    os.now_ms()(now:);
+    acc  = acc + (now - prev);
+    prev = now;
+    if (acc > MAX_CATCHUP) {
+      acc = MAX_CATCHUP;
+    }
+
+    for (; acc >= DT_MS;) {
+      run game.step; // hot physics over the persistent pool — edit game/game.arche; it changes live
+      acc = acc - DT_MS;
+    }
+
+    gfx.clear(win, 1052688); // 0x101010 near-black
+    for (i := 0; i < NBALLS; i += 1) {
+      game.draw_ball(win, Player.x[i], Player.y[i]); // driver reads the pool, device draws each ball
+    }
     gfx.present(win);
     gfx.poll(win)(is_open);
-    t = t + 4;
-    os.sleep_ms(16);
+    os.sleep_ms(2); // brief yield so we don't busy-spin between frames
   }
 }

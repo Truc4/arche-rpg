@@ -1,30 +1,42 @@
-// The HOT logic. Edit this file while `arche run rpg.arche` is running and the window updates live —
-// no restart, the window stays open. (Try: change the colors, the radius, or the motion below.)
+// The HOT logic. Edit this file while `arche run rpg.arche` is running — the window updates live, the
+// host never restarts, AND the balls keep their current position + velocity across the edit, because that
+// state lives in the driver's `Player` pool, not here. THIS is the point: change the physics and watch it
+// take effect on objects that are already in motion.
 //
-// game draws through `gfx` (the sole framebuffer authority — see extras/gfx/raster.arche); it never
-// touches pixels itself, it only hands gfx the window handle + shapes + colors. State (the frame `t`,
-// the window) belongs to the driver and is passed in, so it survives every reload.
+// `step` is a SYSTEM: it runs over every row of the driver's Player pool. Note it is branch-free — arche
+// systems are data-parallel column transforms (each `col = expr` is auto-looped over all rows). That's why
+// the motion here is a SPRING (a restoring force, pure arithmetic) rather than a hard wall bounce: per-row
+// `if` inside a system isn't supported yet (see docs/hot_reload.md). A spring gives lively oscillation with
+// no conditionals.
 #import { gfx }
 
-// A TRIANGLE wave: ramps `0 -> span -> 0` smoothly (no snap-back). `phase` is the driver's ever-rising
-// frame counter. Use this for motion so the circle eases out and back instead of teleporting — a raw
-// `phase % span` is a SAWTOOTH that jumps from the top straight back to the bottom (and two sawtooths of
-// different periods on x and y read as random jumping).
-tri :: func(phase: int, span: int) -> int {
-  s := phase % (2 * span);
-  if (s > span) {
-    s = 2 * span - s;
-  }
-  return s;
+// The `Player` shape: a shape is global vocabulary, defined here (the device that operates on it), not in
+// the datasheet. The driver owns the actual pool (`[8]Player` in rpg.arche); this just names the columns.
+Player :: arche { x, y, vx, vy }
+
+// --- Physics tuning (edit live; these are the "stiffness / center / damping" the design talks about) ---
+CENTER_X  :: 320; // the point balls are pulled toward (window is 640x480)
+CENTER_Y  :: 240;
+STIFFNESS :: 24;  // restoring-force divisor: smaller = stiffer/snappier, larger = looser/slower
+DAMP_NUM  :: 32;  // \ per-frame velocity scale = DAMP_NUM / DAMP_DEN. Equal = no damping (perpetual
+DAMP_DEN  :: 32;  // / motion); make NUM < DEN (e.g. 31/32) to bleed energy so they settle.
+
+// --- Appearance ---
+BALL_RADIUS :: 14;
+BALL_COLOR  :: 16760960; // 0xFFC000 amber
+
+// PHYSICS — a spring pulling every ball toward (CENTER_X, CENTER_Y).
+step :: sys (x, y, vx, vy) {
+  vx = vx - (x - CENTER_X) / STIFFNESS; // accelerate toward center
+  vy = vy - (y - CENTER_Y) / STIFFNESS;
+  vx = vx * DAMP_NUM / DAMP_DEN;        // bleed energy (no-op while NUM == DEN)
+  vy = vy * DAMP_NUM / DAMP_DEN;
+  x = x + vx;                           // integrate position
+  y = y + vy;
 }
 
-// Draw one frame: clear, then a circle that eases left↔right and up↔down, plus a fixed marker square.
-draw :: proc(win: window, t: int) {
-  gfx.clear(win, 1052688); // 0x101010 near-black
-
-  cx := 60 + tri(t, 520); // ease across 60..580..60
-  cy := 120 + tri(t, 240); // ease up/down 120..360..120
-  gfx.circle(win, cx, cy, 48, 16760960); // 0xFFC000 amber
-
-  gfx.rect(win, 40, 40, 60, 60, 4521920); // 0x450080 purple marker
+// Draw one ball. Ideally this would be a `sys` too, but a system's params are component columns only — it
+// can't take the `win` handle (external context), so the driver reads the pool and calls this per row.
+draw_ball :: proc(win: window, x: int, y: int) {
+  gfx.circle(win, x, y, BALL_RADIUS, BALL_COLOR);
 }
