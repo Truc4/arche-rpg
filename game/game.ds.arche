@@ -1,0 +1,8 @@
+// Datasheet for the `game` device — the hot-reloadable gameplay/draw logic.
+//
+// A device is BEHAVIOR-ONLY (the driver owns all storage), which is exactly what makes hot reload work
+// for free: under `arche run` this device compiles to its own reloadable `.so`; edit game.arche, and the
+// running host swaps in the new code while its state (the driver's frame counter, the open window) lives
+// on untouched. `arche build` statically links it — the reload indirection is compiled out entirely.
+//
+// game has no storage of its own yet; the datasheet's presence is what marks this folder a device.

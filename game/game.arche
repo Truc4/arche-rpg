@@ -1,0 +1,30 @@
+// The HOT logic. Edit this file while `arche run rpg.arche` is running and the window updates live —
+// no restart, the window stays open. (Try: change the colors, the radius, or the motion below.)
+//
+// game draws through `gfx` (the sole framebuffer authority — see extras/gfx/raster.arche); it never
+// touches pixels itself, it only hands gfx the window handle + shapes + colors. State (the frame `t`,
+// the window) belongs to the driver and is passed in, so it survives every reload.
+#import { gfx }
+
+// A TRIANGLE wave: ramps `0 -> span -> 0` smoothly (no snap-back). `phase` is the driver's ever-rising
+// frame counter. Use this for motion so the circle eases out and back instead of teleporting — a raw
+// `phase % span` is a SAWTOOTH that jumps from the top straight back to the bottom (and two sawtooths of
+// different periods on x and y read as random jumping).
+tri :: func(phase: int, span: int) -> int {
+  s := phase % (2 * span);
+  if (s > span) {
+    s = 2 * span - s;
+  }
+  return s;
+}
+
+// Draw one frame: clear, then a circle that eases left↔right and up↔down, plus a fixed marker square.
+draw :: proc(win: window, t: int) {
+  gfx.clear(win, 1052688); // 0x101010 near-black
+
+  cx := 60 + tri(t, 520); // ease across 60..580..60
+  cy := 120 + tri(t, 240); // ease up/down 120..360..120
+  gfx.circle(win, cx, cy, 48, 16760960); // 0xFFC000 amber
+
+  gfx.rect(win, 40, 40, 60, 60, 4521920); // 0x450080 purple marker
+}

@@ -1,0 +1,25 @@
+// arche-rpg — the DRIVER / HOST. It owns the window and the loop (the persistent state); the gameplay
+// draw logic lives in the `game` device, which is reloadable.
+//
+//   arche run rpg.arche     → dev: game compiles to a reloadable `.so`; edit game/game.arche and the
+//                             window live-updates without restarting (the window + frame counter persist).
+//   arche build rpg.arche   → release: one static binary, every device call a direct call, zero reload
+//                             indirection.
+//
+// The driver never touches pixels and never restarts: it opens the window, then each frame asks `game`
+// to draw into it, presents, and polls for the close button.
+#import { gfx game os }
+
+main :: proc() {
+  gfx.open(640, 480, "arche-rpg — edit game/game.arche while this runs")(win:);
+
+  t       := 0;
+  is_open := 1;
+  for (; is_open != 0;) {
+    game.draw(win, t); // the hot logic — swap it live under `arche run`
+    gfx.present(win);
+    gfx.poll(win)(is_open);
+    t = t + 4;
+    os.sleep_ms(16);
+  }
+}

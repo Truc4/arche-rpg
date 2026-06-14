@@ -1,0 +1,11 @@
+# arche-rpg — an external project that imports the arche repo's `gfx` device and stdlib.
+#
+# `[lib] paths` adds the arche repo's `extras` (gfx) and `stdlib` as module-search roots, so this app
+# can `#import { gfx }` even though gfx lives outside this tree. (Adjust the paths if you cloned arche
+# somewhere other than ../arche.)
+[lib]
+paths = ["../arche/extras", "../arche/stdlib"]
+
+# Backend for the `gfx` device. Flip to "wayland" on a Wayland session.
+[select]
+gfx = "wayland"
