@@ -12,11 +12,12 @@
 
 // The `Player` shape: a shape is global vocabulary, defined here (the device that operates on it), not in
 // the datasheet. The driver owns the actual pool (`[8]Player` in rpg.arche); this just names the columns.
-Player :: arche { x, y, vx, vy }
+// `pos` and `vel` are STRUCTURED components (each is an `(x, y)` pair) — the body reads `pos.x` / `vel.y`.
+Player :: arche { pos, vel }
 // The physics-tuning SINGLETON shape. The driver owns the one `[1]Config` row and sets it; this system
 // READS it as shared context (the same row 0 for every ball). Edit the driver's values, or these field
-// reads, live.
-Config :: arche { stiffness, center_x, center_y }
+// reads, live. `center` is a structured `(x, y)` component too — read as `Config.center.x[0]`.
+Config :: arche { stiffness, center }
 
 // --- Damping + appearance stay compile-time consts (edit live) ---
 DAMP_NUM    :: 32; // \ per-frame velocity scale = DAMP_NUM / DAMP_DEN. Equal = no damping (perpetual
@@ -27,13 +28,12 @@ BALL_COLOR  :: 16760960; // 0xFFC000 amber
 // PHYSICS — a spring pulling every ball toward the driver-set center, with driver-set stiffness. The
 // `Config.<field>[0]` reads are the SINGLETON: one shared row, read once per ball (Bevy `Res` / flecs
 // singleton). The driver sets them (and could tune them at runtime); this system only reads them.
-step :: sys (x, y, vx, vy) {
-  vx = vx - (x - Config.center_x[0]) / Config.stiffness[0]; // accelerate toward the shared center
-  vy = vy - (y - Config.center_y[0]) / Config.stiffness[0];
-  vx = vx * DAMP_NUM / DAMP_DEN;                            // bleed energy (no-op while NUM == DEN)
-  vy = vy * DAMP_NUM / DAMP_DEN;
-  x = x + vx;                                               // integrate position
-  y = y + vy;
+step :: sys (pos, vel) {
+  vel.x -= (pos.x - Config.center.x[0]) / Config.stiffness[0]; // accelerate toward the shared center —
+  vel.y -= (pos.y - Config.center.y[0]) / Config.stiffness[0]; // per-axis (each axis pulls to its own coord)
+  vel *= DAMP_NUM; // \ bleed energy on the WHOLE velocity vector (no-op while NUM == DEN). Whole-group ops:
+  vel /= DAMP_DEN; // / one line acts on both axes — `vel *= k` ≡ `vel.x *= k; vel.y *= k`.
+  pos += vel;      // integrate position — whole-group vector add (both axes at once)
 }
 
 // Draw one ball. Ideally this would be a `sys` too, but a system's params are component columns only — it

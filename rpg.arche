@@ -27,12 +27,13 @@ MAX_CATCHUP :: 160; // cap accumulated time so a hitch (or a slow rebuild) can't
 main :: proc() {
   gfx.open(WIN_W, WIN_H, "arche-rpg — edit game/game.arche while this runs")(win:);
 
-  // Create the physics singleton: stiffness, center_x, center_y. game.step READS these (shared across all
-  // balls). Tune them here — or set them per frame in the loop — without the device owning any state.
+  // Create the physics singleton: stiffness, center(x, y) — flattened in declaration order. game.step
+  // READS these (shared across all balls). Tune them here — or per frame in the loop — without the device
+  // owning any state.
   insert(Config, 24, 320, 240)(_:, _:);
 
-  // Spawn the balls: (x, y, vx, vy). Different starting points → they oscillate toward the center with
-  // different amplitudes + phases, weaving through each other.
+  // Spawn the balls: pos(x, y), vel(x, y) — flattened, so (px, py, vx, vy). Different starting points →
+  // they oscillate toward the center with different amplitudes + phases, weaving through each other.
   insert(Player, 80, 120, 0, 0)(_:, _:);
   insert(Player, 560, 360, 0, 0)(_:, _:);
   insert(Player, 100, 400, 7, 0)(_:, _:);
@@ -59,7 +60,7 @@ main :: proc() {
 
     gfx.clear(win, 1052688); // 0x101010 near-black
     for (i := 0; i < NBALLS; i += 1) {
-      game.draw_ball(win, Player.x[i], Player.y[i]); // driver reads the pool, device draws each ball
+      game.draw_ball(win, Player.pos.x[i], Player.pos.y[i]); // driver reads the pool, device draws each ball
     }
     gfx.present(win);
     gfx.poll(win)(is_open);
