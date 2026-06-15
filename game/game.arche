@@ -29,11 +29,13 @@ BALL_COLOR  :: 16760960; // 0xFFC000 amber
 // `Config.<field>[0]` reads are the SINGLETON: one shared row, read once per ball (Bevy `Res` / flecs
 // singleton). The driver sets them (and could tune them at runtime); this system only reads them.
 step :: sys (pos, vel) {
-  vel.x -= (pos.x - Config.center.x[0]) / Config.stiffness[0]; // accelerate toward the shared center —
-  vel.y -= (pos.y - Config.center.y[0]) / Config.stiffness[0]; // per-axis (each axis pulls to its own coord)
-  vel *= DAMP_NUM; // \ bleed energy on the WHOLE velocity vector (no-op while NUM == DEN). Whole-group ops:
-  vel /= DAMP_DEN; // / one line acts on both axes — `vel *= k` ≡ `vel.x *= k; vel.y *= k`.
-  pos += vel;      // integrate position — whole-group vector add (both axes at once)
+  // Spring toward the shared center, as WHOLE-VECTOR ops — each line acts on both axes at once. The
+  // singleton `Config.center[0]` is a group too, so it folds component-wise (center.x / center.y); the
+  // scalar `Config.stiffness[0]` is shared. `vel *= k` ≡ `vel.x *= k; vel.y *= k`.
+  vel -= (pos - Config.center[0]) / Config.stiffness[0]; // accelerate toward the shared center
+  vel *= DAMP_NUM;                                       // bleed energy (no-op while NUM == DEN)
+  vel /= DAMP_DEN;
+  pos += vel;                                            // integrate position
 }
 
 // Draw one ball. Ideally this would be a `sys` too, but a system's params are component columns only — it
