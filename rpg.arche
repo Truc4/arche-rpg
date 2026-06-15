@@ -15,6 +15,7 @@
 // The world state. The `Player` shape's components come from the `game` device's datasheet; the driver
 // owns the actual pool (sized >= the datasheet's minimum). State persists across device reloads.
 [8]Player;
+[1]Config; // the physics-tuning singleton (one shared row) the driver owns + sets; game.step reads it
 
 WIN_W  :: 640;
 WIN_H  :: 480;
@@ -25,6 +26,10 @@ MAX_CATCHUP :: 160; // cap accumulated time so a hitch (or a slow rebuild) can't
 
 main :: proc() {
   gfx.open(WIN_W, WIN_H, "arche-rpg — edit game/game.arche while this runs")(win:);
+
+  // Create the physics singleton: stiffness, center_x, center_y. game.step READS these (shared across all
+  // balls). Tune them here — or set them per frame in the loop — without the device owning any state.
+  insert(Config, 24, 320, 240)(_:, _:);
 
   // Spawn the balls: (x, y, vx, vy). Different starting points → they oscillate toward the center with
   // different amplitudes + phases, weaving through each other.

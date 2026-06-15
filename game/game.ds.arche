@@ -11,3 +11,11 @@ y  :: int;
 vx :: int;
 vy :: int;
 [8]Player;
+
+// Physics tuning lives in a SINGLETON the driver owns + sets — the `step` system READS it (shared across
+// every ball), so the driver can tune the simulation without the device owning any state. A singleton is
+// just a `[1]` pool (one row = the one shared instance). The system reads `Config.stiffness[0]` etc.
+stiffness :: int;
+center_x  :: int;
+center_y  :: int;
+[1]Config;
