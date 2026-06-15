@@ -13,33 +13,33 @@
 // The `Player` shape: a shape is global vocabulary, defined here (the device that operates on it), not in
 // the datasheet. The driver owns the actual pool (`[8]Player` in rpg.arche); this just names the columns.
 // `pos` and `vel` are STRUCTURED components (each is an `(x, y)` pair) — the body reads `pos.x` / `vel.y`.
-Player :: arche { pos, vel }
-// The physics-tuning SINGLETON shape. The driver owns the one `[1]Config` row and sets it; this system
-// READS it as shared context (the same row 0 for every ball). Edit the driver's values, or these field
-// reads, live. `center` is a structured `(x, y)` component too — read as `Config.center.x[0]`.
-Config :: arche { stiffness, center }
+// `color` is a per-ball 0xRRGGBB component — each ball carries its own (seeded by the driver).
+Player :: arche { pos, vel, color }
 
-// --- Damping + appearance stay compile-time consts (edit live) ---
+// --- Tuning + appearance: compile-time consts, edited LIVE. These live in the device, so editing them and
+// saving hot-reloads the running window (the driver's Player pool — the live positions/velocities —
+// persists across the reload). A driver-owned `[1]Config` singleton would NOT hot-reload (the driver isn't
+// reloaded) and nothing here is set at runtime, so consts are both simpler and more live-editable. ---
+STIFFNESS   :: 24; // spring stiffness: bigger = looser/slower pull toward center
+CENTER_X    :: 320; // the point every ball is pulled toward
+CENTER_Y    :: 240;
 DAMP_NUM    :: 32; // \ per-frame velocity scale = DAMP_NUM / DAMP_DEN. Equal = no damping (perpetual
 DAMP_DEN    :: 32; // / motion); make NUM < DEN (e.g. 31/32) to bleed energy so they settle.
 BALL_RADIUS :: 14;
-BALL_COLOR  :: 16760960; // 0xFFC000 amber
 
-// PHYSICS — a spring pulling every ball toward the driver-set center, with driver-set stiffness. The
-// `Config.<field>[0]` reads are the SINGLETON: one shared row, read once per ball (Bevy `Res` / flecs
-// singleton). The driver sets them (and could tune them at runtime); this system only reads them.
+// PHYSICS — a spring pulling every ball toward (CENTER_X, CENTER_Y). The center is two distinct consts, so
+// the accel is per-axis; damping and integration act on the whole velocity/position vector at once.
 step :: sys (pos, vel) {
-  // Spring toward the shared center, as WHOLE-VECTOR ops — each line acts on both axes at once. The
-  // singleton `Config.center[0]` is a group too, so it folds component-wise (center.x / center.y); the
-  // scalar `Config.stiffness[0]` is shared. `vel *= k` ≡ `vel.x *= k; vel.y *= k`.
-  vel -= (pos - Config.center[0]) / Config.stiffness[0]; // accelerate toward the shared center
-  vel *= DAMP_NUM;                                       // bleed energy (no-op while NUM == DEN)
+  vel.x -= (pos.x - CENTER_X) / STIFFNESS; // accelerate toward the center (per-axis: distinct coords)
+  vel.y -= (pos.y - CENTER_Y) / STIFFNESS;
+  vel *= DAMP_NUM; // bleed energy on the whole vector (no-op while NUM == DEN)
   vel /= DAMP_DEN;
-  pos += vel;                                            // integrate position
+  pos += vel; // integrate position (whole vector)
 }
 
-// Draw one ball. Ideally this would be a `sys` too, but a system's params are component columns only — it
-// can't take the `win` handle (external context), so the driver reads the pool and calls this per row.
-draw_ball :: proc(win: window, x: int, y: int) {
-  gfx.circle(win, x, y, BALL_RADIUS, BALL_COLOR);
+// Draw one ball in its OWN color. Ideally this would be a `sys` too, but a system's params are component
+// columns only — it can't take the `win` handle (external context), so the driver reads the pool and calls
+// this per row, passing that ball's `color`.
+draw_ball :: proc(win: window, x: int, y: int, color: int) {
+  gfx.circle(win, x, y, BALL_RADIUS, color);
 }

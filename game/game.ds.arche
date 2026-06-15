@@ -11,12 +11,5 @@
 // (position, velocity) instead of a soup of loose scalars.
 pos(x, y) :: int;
 vel(x, y) :: int;
+color     :: int; // per-ball 0xRRGGBB; the driver seeds distinct colors, draw reads each ball's own
 [8]Player;
-
-// Physics tuning lives in a SINGLETON the driver owns + sets — the `step` system READS it (shared across
-// every ball), so the driver can tune the simulation without the device owning any state. A singleton is
-// just a `[1]` pool (one row = the one shared instance). The system reads `Config.stiffness[0]`,
-// `Config.center.x[0]`, etc.
-stiffness    :: int;
-center(x, y) :: int;
-[1]Config;

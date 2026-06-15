@@ -14,8 +14,8 @@
 
 // The world state. The `Player` shape's components come from the `game` device's datasheet; the driver
 // owns the actual pool (sized >= the datasheet's minimum). State persists across device reloads.
-[8]Player;
-[1]Config; // the physics-tuning singleton (one shared row) the driver owns + sets; game.step reads it
+// `(5)` = five live rows; their values are seeded columnar in `main` (see below).
+[8]Player(5);
 
 WIN_W  :: 640;
 WIN_H  :: 480;
@@ -27,18 +27,14 @@ MAX_CATCHUP :: 160; // cap accumulated time so a hitch (or a slow rebuild) can't
 main :: proc() {
   gfx.open(WIN_W, WIN_H, "arche-rpg — edit game/game.arche while this runs")(win:);
 
-  // Create the physics singleton: stiffness, center(x, y) — flattened in declaration order. game.step
-  // READS these (shared across all balls). Tune them here — or per frame in the loop — without the device
-  // owning any state.
-  insert(Config, 24, 320, 240)(_:, _:);
-
-  // Spawn the balls: pos(x, y), vel(x, y) — flattened, so (px, py, vx, vy). Different starting points →
-  // they oscillate toward the center with different amplitudes + phases, weaving through each other.
-  insert(Player, 80, 120, 0, 0)(_:, _:);
-  insert(Player, 560, 360, 0, 0)(_:, _:);
-  insert(Player, 100, 400, 7, 0)(_:, _:);
-  insert(Player, 540, 100, 0, 7)(_:, _:);
-  insert(Player, 320, 60, 0, 0)(_:, _:);
+  // Seed the balls COLUMNAR — one array per column, element i is ball i (the DOD way; beats five
+  // row-at-a-time inserts). Different starting points → they oscillate toward the center with different
+  // amplitudes + phases, weaving through each other. (`insert` is for spawning ONE entity at runtime.)
+  Player.pos.x = {80, 560, 100, 540, 320};
+  Player.pos.y = {120, 360, 400, 100, 60};
+  Player.vel.x = {0, 0, 7, 0, 0};
+  Player.vel.y = {0, 0, 0, 7, 0};
+  Player.color = {0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF}; // amber, red, green, blue, magenta
 
   // Fixed-timestep loop. `acc` banks real elapsed milliseconds; we run `game.step` once per whole DT_MS
   // banked, so the physics rate is stable no matter the draw rate (a stable sim, as requested).
@@ -60,7 +56,7 @@ main :: proc() {
 
     gfx.clear(win, 1052688); // 0x101010 near-black
     for (i := 0; i < NBALLS; i += 1) {
-      game.draw_ball(win, Player.pos.x[i], Player.pos.y[i]); // driver reads the pool, device draws each ball
+      game.draw_ball(win, Player.pos.x[i], Player.pos.y[i], Player.color[i]); // each ball in its own color
     }
     gfx.present(win);
     gfx.poll(win)(is_open);
