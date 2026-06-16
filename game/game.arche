@@ -29,7 +29,7 @@ BALL_RADIUS :: 14;
 
 // PHYSICS — a spring pulling every ball toward (CENTER_X, CENTER_Y). The center is two distinct consts, so
 // the accel is per-axis; damping and integration act on the whole velocity/position vector at once.
-step :: sys (pos, vel) {
+step :: map (pos, vel) {
   vel.x -= (pos.x - CENTER_X) / STIFFNESS; // accelerate toward the center (per-axis: distinct coords)
   vel.y -= (pos.y - CENTER_Y) / STIFFNESS;
   vel *= DAMP_NUM; // bleed energy on the whole vector (no-op while NUM == DEN)
