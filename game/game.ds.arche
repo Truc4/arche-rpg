@@ -1,15 +1,4 @@
-// Datasheet for the `game` device — the hot-reloadable gameplay/physics logic.
-//
-// A device is BEHAVIOR-ONLY: it declares the COMPONENTS it works with and the systems over them, but it
-// owns NO storage. The driver (rpg.arche) owns the actual `Player` pool; `[N]Player` here is the storage
-// REQUIREMENT (a minimum), not an allocation. That split is what makes hot reload work for free — the
-// device's code (physics/draw) can be swapped while the driver's pool (the live positions + velocities)
-// is untouched, so the balls keep flying across an edit. `arche build` statically links it; the reload
-// indirection is compiled out.
-// Structured components: `pos(x, y)` is ONE component made of two fields. The body addresses them as
-// `pos.x` / `pos.y`; storage and `insert` flatten them in order. This keeps the vocabulary semantic
-// (position, velocity) instead of a soup of loose scalars.
 pos(x, y) :: int;
 vel(x, y) :: int;
-color     :: int; // per-ball 0xRRGGBB; the driver seeds distinct colors, draw reads each ball's own
+color     :: int;
 [8]Player;

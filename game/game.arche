@@ -1,48 +1,24 @@
-// The HOT logic. Edit this file while `arche run rpg.arche` is running — the window updates live, the
-// host never restarts, AND the balls keep their current position + velocity across the edit, because that
-// state lives in the driver's `Player` pool, not here. THIS is the point: change the physics and watch it
-// take effect on objects that are already in motion.
-//
-// `step` is a SYSTEM: it runs over every row of the driver's Player pool. Note it is branch-free — arche
-// systems are data-parallel column transforms (each `col = expr` is auto-looped over all rows). That's why
-// the motion here is a SPRING (a restoring force, pure arithmetic) rather than a hard wall bounce: per-row
-// `if` inside a system isn't supported yet (see docs/hot_reload.md). A spring gives lively oscillation with
-// no conditionals.
 #import { gfx }
 
-// The `Player` shape: a shape is global vocabulary, defined here (the device that operates on it), not in
-// the datasheet. The driver owns the actual pool (`[8]Player` in rpg.arche); this just names the columns.
-// `pos` and `vel` are STRUCTURED components (each is an `(x, y)` pair) — the body reads `pos.x` / `vel.y`.
-// `color` is a per-ball 0xRRGGBB component — each ball carries its own (seeded by the driver).
 Player :: arche { pos, vel, color }
 
-// --- Tuning + appearance: compile-time consts, edited LIVE. These live in the device, so editing them and
-// saving hot-reloads the running window (the driver's Player pool — the live positions/velocities —
-// persists across the reload). A driver-owned `[1]Config` singleton would NOT hot-reload (the driver isn't
-// reloaded) and nothing here is set at runtime, so consts are both simpler and more live-editable. ---
-STIFFNESS   :: 24; // spring stiffness: bigger = looser/slower pull toward center
-CENTER_X    :: 320; // the point every ball is pulled toward
+STIFFNESS   :: 24;
+CENTER_X    :: 320;
 CENTER_Y    :: 240;
-DAMP_NUM    :: 32; // \ per-frame velocity scale = DAMP_NUM / DAMP_DEN. Equal = no damping (perpetual
-DAMP_DEN    :: 32; // / motion); make NUM < DEN (e.g. 31/32) to bleed energy so they settle.
+DAMP_NUM    :: 32;
+DAMP_DEN    :: 32;
 BALL_RADIUS :: 14;
 
-// The columns `step` runs over — a named query is the idiomatic handle for a map's domain.
 Movers :: query { pos, vel }
 
-// PHYSICS — a spring pulling every ball toward (CENTER_X, CENTER_Y). The center is two distinct consts, so
-// the accel is per-axis; damping and integration act on the whole velocity/position vector at once.
 step :: map(Movers) {
-  vel.x -= (pos.x - CENTER_X) / STIFFNESS; // accelerate toward the center (per-axis: distinct coords)
+  vel.x -= (pos.x - CENTER_X) / STIFFNESS;
   vel.y -= (pos.y - CENTER_Y) / STIFFNESS;
-  vel *= DAMP_NUM; // bleed energy on the whole vector (no-op while NUM == DEN)
+  vel *= DAMP_NUM;
   vel /= DAMP_DEN;
-  pos += vel; // integrate position (whole vector)
+  pos += vel;
 }
 
-// Draw one ball in its OWN color. Ideally this would be a `sys` too, but a system's params are component
-// columns only — it can't take the `win` handle (external context), so the driver reads the pool and calls
-// this per row, passing that ball's `color`.
 draw_ball :: proc(win: window, x: int, y: int, color: int) {
   gfx.circle(win, x, y, BALL_RADIUS, color);
 }
