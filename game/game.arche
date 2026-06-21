@@ -11,6 +11,15 @@ BALL_RADIUS :: 14;
 
 Movers :: query { pos, vel }
 
+/// Spring physics for every mover: pull its position toward screen center, damp the velocity, then
+/// integrate. Run once per frame.
+///
+/// ```arche
+/// insert(Player{ pos: (80, 240), vel: (0, 0), color: 0 })(_h:, _ok:);
+/// run step;
+/// fmt.assert(Player.pos.x[0] > 80, "spring pulls the mover toward center\n");
+/// fmt.assert(Player.pos.x[0] <= 320, "no overshoot past center in one step\n");
+/// ```
 step :: map(Movers) {
   vel.x -= (pos.x - CENTER_X) / STIFFNESS;
   vel.y -= (pos.y - CENTER_Y) / STIFFNESS;
