@@ -8,40 +8,51 @@
 }
 
 [8]Player(5);
-[1]Window(1);
 
+#file
 WIN_W  :: 640;
 WIN_H  :: 480;
 NBALLS :: 5;
+DT     :: 16;
 
-Window :: arche {
-  win :: window,
-}
+win  : window;
+last : i64;
+bank : i64;
 
 boot :: system {
   gfx.open(WIN_W, WIN_H, "arche-rpg — edit game/game.arche while this runs")(w:);
+  win          = w;
   Player.pos.x = { 80, 560, 100, 540, 320 };
   Player.pos.y = { 120, 360, 400, 100, 60 };
   Player.vel.x = { 0, 0, 7, 0, 0 };
   Player.vel.y = { 0, 0, 0, 7, 0 };
   Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
-  Window.win   = { w };
+  os.now_ms()(now:);
+  last = now;
 }
 
-paint :: proc(win: window) {
-  gfx.clear(win, 0x101010);
+paint :: proc(w: window) {
+  gfx.clear(w, 0x101010);
   for (i := 0; i < NBALLS; i += 1) {
-    game.draw_ball(win, Player.pos.x[i], Player.pos.y[i], Player.color[i]);
+    game.draw_ball(w, Player.pos.x[i], Player.pos.y[i], Player.color[i]);
   }
-  gfx.present(win);
+  gfx.present(w);
 }
 
 frame :: system {
-  run game.step;
-  paint(Window.win[0]);
-  gfx.poll(Window.win[0])(open:);
-  if (!open) {
-    os.exit(0);
+  os.now_ms()(now:);
+  bank = bank + (now - last);
+  last = now;
+  if (bank >= DT) {
+    bank = bank - DT;
+    run game.step; // a tick is owed: step once, DON'T sleep — the schedule re-runs us to catch up
   }
-  os.sleep_ms(16);
+  else {
+    paint(win); // caught up: draw the latest state once...
+    gfx.poll(win)(open:);
+    if (!open) {
+      os.exit(0);
+    }
+    os.sleep_ms(i32(DT - bank)); // ...and sleep only the remainder until the next tick
+  }
 }
