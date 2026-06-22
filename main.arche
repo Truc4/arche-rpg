@@ -1,58 +1,80 @@
 #import { gfx game os }
 
 #run {
-  seq({
-    run (boot),
-    forever(run (frame)),
-  }),
+  seq(
+    {
+      run (boot),
+      forever(
+        seq(
+          {
+            run (pace),
+            run (game.sim),
+            run (clear),
+            run (render),
+            run (present),
+            run (io),
+          },
+        ),
+      ),
+    },
+  ),
 }
 
 [8]Player(5);
 
-#file
-WIN_W  :: 640;
-WIN_H  :: 480;
-NBALLS :: 5;
-DT     :: 16;
+[1]Clock;
+Clock :: arche { last :: i64 bank :: i64 }
 
-win  : window;
-last : i64;
-bank : i64;
+[1]Window;
+Window :: arche { handle :: window }
+
+Windowed  :: query { handle }
+Drawables :: query { pos, color }
+Timing    :: query { last, bank }
+
+#file
+
+WIN_W       :: 640;
+WIN_H       :: 480;
+DT          :: 16;
+BALL_RADIUS :: 14;
 
 boot :: system {
-  gfx.open(WIN_W, WIN_H, "arche-rpg — edit game/game.arche while this runs")(w:);
-  win          = w;
+  gfx.open(WIN_W, WIN_H, "arche-rpg")(w:);
+  insert(Window { handle: w })(_:, _:);
   Player.pos.x = { 80, 560, 100, 540, 320 };
   Player.pos.y = { 120, 360, 400, 100, 60 };
   Player.vel.x = { 0, 0, 7, 0, 0 };
   Player.vel.y = { 0, 0, 0, 7, 0 };
   Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
   os.now_ms()(now:);
-  last = now;
+  insert(Clock { last: now, bank: 0 })(_:, _:);
 }
 
-paint :: proc(w: window) {
-  gfx.clear(w, 0x101010);
-  for (i := 0; i < NBALLS; i += 1) {
-    game.draw_ball(w, Player.pos.x[i], Player.pos.y[i], Player.color[i]);
-  }
-  gfx.present(w);
-}
-
-frame :: system {
+pace :: system (Timing) {
   os.now_ms()(now:);
-  bank = bank + (now - last);
+  bank = now - last;
   last = now;
-  if (bank >= DT) {
-    bank = bank - DT;
-    run game.step; // a tick is owed: step once, DON'T sleep — the schedule re-runs us to catch up
+}
+
+clear :: system (Windowed) {
+  gfx.clear(handle, 0x101010);
+}
+
+render :: system (Drawables, Windowed) {
+  gfx.circle(handle, pos.x, pos.y, BALL_RADIUS, color);
+}
+
+present :: system (Windowed) {
+  gfx.present(handle);
+}
+
+io :: system (Windowed, Timing) {
+  gfx.poll(handle)(open:);
+  if (!open) {
+    os.exit(0);
   }
-  else {
-    paint(win); // caught up: draw the latest state once...
-    gfx.poll(win)(open:);
-    if (!open) {
-      os.exit(0);
-    }
-    os.sleep_ms(i32(DT - bank)); // ...and sleep only the remainder until the next tick
+  if (bank < DT) {
+    os.sleep_ms(i32(DT - bank));
   }
 }
