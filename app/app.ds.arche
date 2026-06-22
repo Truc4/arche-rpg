@@ -1,5 +1,6 @@
 #import { gfx }
 handle :: window;
+bg     :: int;
 last   :: i64;
 [1]Window;
 [1]Clock;

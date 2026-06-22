@@ -1,6 +1,6 @@
 #import { gfx game os }
 
-Window :: arche { handle }
+Window :: arche { handle, bg }
 Clock  :: arche { last }
 
 WIN_W :: 640;
@@ -10,12 +10,13 @@ DT    :: 16;
 @allow(discarded_ok)
 boot :: system {
   gfx.open(WIN_W, WIN_H, "arche-rpg")(w:);
-  insert(Window { handle: w })(_:, _:);
+  insert(Window { handle: w, bg: 0x101820 })(_:, _:);
   Player.pos.x = { 80, 560, 100, 540, 320 };
   Player.pos.y = { 120, 360, 400, 100, 60 };
   Player.vel.x = { 0, 0, 7, 0, 0 };
   Player.vel.y = { 0, 0, 0, 7, 0 };
   Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
+  Player.r     = { 16, 16, 16, 16, 16 };
   os.now_ms()(now:);
   insert(Clock { last: now })(_:, _:);
 }
@@ -25,11 +26,13 @@ pace :: system (query { last }) {
   last = now;
 }
 
-io :: system (query { handle }, query { last }) {
-  gfx.poll(handle)(open:);
-  if (!open) {
-    os.exit(0);
-  }
+// `each`, not `system`: an each over the empty `Closed` pool runs zero times; a system would run once and
+// exit on frame 1. Fires only after `gfx.poll` inserts a `Closed` row.
+done :: each (Closed) {
+  os.exit(0);
+}
+
+io :: system (query { last }) {
   os.now_ms()(now:);
   work := now - last;
   if (work < DT) {
