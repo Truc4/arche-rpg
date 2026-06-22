@@ -1,4 +1,5 @@
 pos(x, y) :: int;
 vel(x, y) :: int;
 color     :: int;
+r         :: int;
 [8]Player;

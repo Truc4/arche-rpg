@@ -1,80 +1,17 @@
-#import { gfx game os }
+// arche-rpg driver — STATE ONLY. The driver declares the pools (the program's mutable state) and the
+// schedule; all LOGIC lives in the imported devices: `game` (physics), `view` (drawing), `app` (window +
+// frame-loop lifecycle). Shapes/components and consts (BALL_RADIUS, DT, …) belong to those devices.
+#import { game view app }
 
 #run {
   seq(
     {
-      run (boot),
-      forever(
-        seq(
-          {
-            run (pace),
-            run (game.sim),
-            run (clear),
-            run (render),
-            run (present),
-            run (io),
-          },
-        ),
-      ),
+      app.boot,
+      forever(seq({ app.pace, game.step, view.clear, view.render, view.present, app.io })),
     },
-  ),
+  )
 }
 
 [8]Player(5);
-
-[1]Clock;
-Clock :: arche { last :: i64 bank :: i64 }
-
 [1]Window;
-Window :: arche { handle :: window }
-
-Windowed  :: query { handle }
-Drawables :: query { pos, color }
-Timing    :: query { last, bank }
-
-#file
-
-WIN_W       :: 640;
-WIN_H       :: 480;
-DT          :: 16;
-BALL_RADIUS :: 14;
-
-boot :: system {
-  gfx.open(WIN_W, WIN_H, "arche-rpg")(w:);
-  insert(Window { handle: w })(_:, _:);
-  Player.pos.x = { 80, 560, 100, 540, 320 };
-  Player.pos.y = { 120, 360, 400, 100, 60 };
-  Player.vel.x = { 0, 0, 7, 0, 0 };
-  Player.vel.y = { 0, 0, 0, 7, 0 };
-  Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
-  os.now_ms()(now:);
-  insert(Clock { last: now, bank: 0 })(_:, _:);
-}
-
-pace :: system (Timing) {
-  os.now_ms()(now:);
-  bank = now - last;
-  last = now;
-}
-
-clear :: system (Windowed) {
-  gfx.clear(handle, 0x101010);
-}
-
-render :: system (Drawables, Windowed) {
-  gfx.circle(handle, pos.x, pos.y, BALL_RADIUS, color);
-}
-
-present :: system (Windowed) {
-  gfx.present(handle);
-}
-
-io :: system (Windowed, Timing) {
-  gfx.poll(handle)(open:);
-  if (!open) {
-    os.exit(0);
-  }
-  if (bank < DT) {
-    os.sleep_ms(i32(DT - bank));
-  }
-}
+[1]Clock;

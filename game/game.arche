@@ -1,11 +1,13 @@
-Player :: arche { pos, vel, color }
+Player :: arche { pos, vel, color, r }
 Movers :: query { pos, vel }
 
 /// ```arche
-/// insert(Player{ pos: (80, 240), vel: (0, 0), color: 0 })(_h:, _ok:);
-/// run step;
-/// fmt.assert(Player.pos.x[0] > 80, "spring pulls the mover toward center\n");
-/// fmt.assert(Player.pos.x[0] <= 320, "no overshoot past center in one step\n");
+/// seed :: system { insert(Player{ pos: (80, 240), vel: (0, 0), color: 0 })(_h:, _ok:); }
+/// check :: system {
+///   fmt.assert(Player.pos.x[0] > 80, "spring pulls the mover toward center\n");
+///   fmt.assert(Player.pos.x[0] <= 320, "no overshoot past center in one step\n");
+/// }
+/// #run seq({ seed, step, check })
 /// ```
 step :: map (Movers) {
   vel.x -= (pos.x - CENTER_X) / STIFFNESS;
@@ -13,10 +15,6 @@ step :: map (Movers) {
   vel *= DAMP_NUM;
   vel /= DAMP_DEN;
   pos += vel;
-}
-
-sim :: system {
-  run step;
 }
 
 #file

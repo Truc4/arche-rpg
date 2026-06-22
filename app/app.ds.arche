@@ -1,0 +1,5 @@
+#import { gfx }
+handle :: window;
+last   :: i64;
+[1]Window;
+[1]Clock;

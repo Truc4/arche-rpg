@@ -1,0 +1,38 @@
+#import { gfx game os }
+
+Window :: arche { handle }
+Clock  :: arche { last }
+
+WIN_W :: 640;
+WIN_H :: 480;
+DT    :: 16;
+
+@allow(discarded_ok)
+boot :: system {
+  gfx.open(WIN_W, WIN_H, "arche-rpg")(w:);
+  insert(Window { handle: w })(_:, _:);
+  Player.pos.x = { 80, 560, 100, 540, 320 };
+  Player.pos.y = { 120, 360, 400, 100, 60 };
+  Player.vel.x = { 0, 0, 7, 0, 0 };
+  Player.vel.y = { 0, 0, 0, 7, 0 };
+  Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
+  os.now_ms()(now:);
+  insert(Clock { last: now })(_:, _:);
+}
+
+pace :: system (query { last }) {
+  os.now_ms()(now:);
+  last = now;
+}
+
+io :: system (query { handle }, query { last }) {
+  gfx.poll(handle)(open:);
+  if (!open) {
+    os.exit(0);
+  }
+  os.now_ms()(now:);
+  work := now - last;
+  if (work < DT) {
+    os.sleep_ms(i32(DT - work));
+  }
+}
