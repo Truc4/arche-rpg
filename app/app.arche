@@ -17,25 +17,31 @@ boot :: system {
   Player.vel.y = { 0, 0, 0, 7, 0 };
   Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
   Player.r     = { 16, 16, 16, 16, 16 };
-  os.now_ms()(now:);
+  os.clock_mono()(ts:, _:);
+  now := os.ms_of(ts);
   insert(Clock { last: now })(_:, _:);
 }
 
 pace :: system (query { last }) {
-  os.now_ms()(now:);
-  last = now;
+  os.clock_mono()(ts:, _:);
+  last = os.ms_of(ts);
 }
 
 // `each`, not `system`: an each over the empty `Closed` pool runs zero times; a system would run once and
 // exit on frame 1. Fires only after `gfx.poll` inserts a `Closed` row.
 done :: each (Closed) {
-  os.exit(0);
+  os.exit(0)(_:);
 }
 
 io :: system (query { last }) {
-  os.now_ms()(now:);
+  os.clock_mono()(ts:, _:);
+  now := os.ms_of(ts);
   work := now - last;
   if (work < DT) {
-    os.sleep_ms(i32(DT - work));
+    slp := DT - work;
+    st: [2]i64;
+    st[0] = slp / 1000;
+    st[1] = (slp % 1000) * 1000000;
+    os.nanosleep(st)(_:);
   }
 }
