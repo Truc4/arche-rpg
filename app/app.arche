@@ -17,14 +17,13 @@ boot :: system {
   Player.vel.y = { 0, 0, 0, 7, 0 };
   Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
   Player.r     = { 16, 16, 16, 16, 16 };
-  os.clock_mono()(ts:, _:);
-  now := os.ms_of(ts);
+  os.now_ms()(now:);
   insert(Clock { last: now })(_:, _:);
 }
 
 pace :: system (query { last }) {
-  os.clock_mono()(ts:, _:);
-  last = os.ms_of(ts);
+  os.now_ms()(now:);
+  last = now;
 }
 
 // `each`, not `system`: an each over the empty `Closed` pool runs zero times; a system would run once and
@@ -34,8 +33,7 @@ done :: each (Closed) {
 }
 
 io :: system (query { last }) {
-  os.clock_mono()(ts:, _:);
-  now := os.ms_of(ts);
+  os.now_ms()(now:);
   work := now - last;
   if (work < DT) {
     os.sleep_ms(DT - work)(_:);
