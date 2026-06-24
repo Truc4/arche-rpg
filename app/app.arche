@@ -38,10 +38,6 @@ io :: system (query { last }) {
   now := os.ms_of(ts);
   work := now - last;
   if (work < DT) {
-    slp := DT - work;
-    st: [2]i64;
-    st[0] = slp / 1000;
-    st[1] = (slp % 1000) * 1000000;
-    os.nanosleep(st)(_:);
+    os.sleep_ms(DT - work)(_:);
   }
 }
