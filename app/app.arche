@@ -22,12 +22,10 @@ boot :: system {
 }
 
 pace :: system (query { last }) {
-  os.now_ms()(now:);
-  last = now;
+  os.now_ms()(now:); // Should be able  to use `last` (no :)
+  last = last(now);
 }
 
-// `each`, not `system`: an each over the empty `Closed` pool runs zero times; a system would run once and
-// exit on frame 1. Fires only after `gfx.poll` inserts a `Closed` row.
 done :: each (Closed) {
   os.exit(0)(_:);
 }

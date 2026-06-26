@@ -4,7 +4,7 @@
   seq(
     {
       app.boot,
-      forever(seq({ app.pace, game.step, gfx.clear, gfx.circle, gfx.present, gfx.poll, app.done, app.io })),
+      forever(seq({ app.pace, game.step, gfx.clear, gfx.circle, gfx.present, gfx.poll, app.done, app.io, })),
     },
   )
 }
