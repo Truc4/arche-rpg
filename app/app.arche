@@ -7,7 +7,6 @@ WIN_W :: 640;
 WIN_H :: 480;
 DT    :: 16;
 
-@allow(discarded_ok)
 boot :: system {
   gfx.open(WIN_W, WIN_H, "arche-rpg")(w:);
   insert(Window { handle: w, bg: 0x101820 })(_:, _:);
