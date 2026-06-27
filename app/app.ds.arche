@@ -1,6 +1,9 @@
 #import { gfx }
-handle :: window;
-bg     :: int;
-last   :: i64;
+// Component column types are declared INLINE on the archetypes in app.arche
+// (`Window :: arche { handle :: window, bg :: int }`, `Clock :: arche { last :: i64 }`) so a column's
+// type IS its backing — readable and writable in a system as the plain backing. Declaring them as
+// separate `name :: T` decls here would mint DISTINCT subtypes a system can read-as-backing but not
+// write-from-backing (the inline-vs-separate-component collapse asymmetry). The datasheet keeps only the
+// pool minimums.
 [1]Window;
 [1]Clock;

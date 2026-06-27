@@ -1,7 +1,7 @@
 #import { gfx game os }
 
-Window :: arche { handle, bg }
-Clock  :: arche { last }
+Window :: arche { handle :: window, bg :: int }
+Clock  :: arche { last :: i64 }
 
 WIN_W :: 640;
 WIN_H :: 480;
@@ -21,8 +21,8 @@ boot :: system {
 }
 
 pace :: system (query { last }) {
-  os.now_ms()(now:); // Should be able  to use `last` (no :)
-  last = last(now);
+  os.now_ms()(now:);
+  last = now;
 }
 
 done :: each (Closed) {
