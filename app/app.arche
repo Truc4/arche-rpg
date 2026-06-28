@@ -9,7 +9,7 @@ DT    :: 16;
 
 boot :: system {
   gfx.open(WIN_W, WIN_H, "arche-rpg")(w:);
-  insert(Window { handle: w, bg: 0x101820 })(_:, _:);
+  insert(Window { handle: w, bg: 0x101820 });
   Player.pos.x = { 80, 560, 100, 540, 320 };
   Player.pos.y = { 120, 360, 400, 100, 60 };
   Player.vel.x = { 0, 0, 7, 0, 0 };
@@ -17,7 +17,7 @@ boot :: system {
   Player.color = { 0xFFC000, 0xFF4040, 0x40FF80, 0x4080FF, 0xFF40FF };
   Player.r     = { 16, 16, 16, 16, 16 };
   os.now_ms()(now:);
-  insert(Clock { last: now })(_:, _:);
+  insert(Clock { last: now });
 }
 
 pace :: system (query { last }) {
