@@ -9,7 +9,7 @@ Movers :: query { pos, vel }
 /// }
 /// #run seq({ seed, step, check })
 /// ```
-step :: map (Movers) {
+step :: map (Movers) (vel, pos) {
   vel.x -= (pos.x - CENTER_X) / STIFFNESS;
   vel.y -= (pos.y - CENTER_Y) / STIFFNESS;
   vel *= DAMP_NUM;

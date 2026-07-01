@@ -7,7 +7,7 @@ WIN_W :: 640;
 WIN_H :: 480;
 DT    :: 16;
 
-boot :: system {
+boot :: system eff {
   gfx.open(WIN_W, WIN_H, "arche-rpg")(w:);
   insert(Window { handle: w, bg: 0x101820 });
   Player.pos.x = { 80, 560, 100, 540, 320 };
@@ -20,16 +20,16 @@ boot :: system {
   insert(Clock { last: now });
 }
 
-pace :: system (query { last }) {
+pace :: system (query { last }) (last) eff {
   os.now_ms()(now:);
   last = now;
 }
 
-done :: each (Closed) {
+done :: map (Closed) eff {
   os.exit(0)(_:);
 }
 
-io :: system (query { last }) {
+io :: system (query { last }) eff {
   os.now_ms()(now:);
   work := now - last;
   if (work < DT) {
